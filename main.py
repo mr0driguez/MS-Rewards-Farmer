@@ -11,14 +11,14 @@ from datetime import datetime
 from enum import Enum, auto
 
 from src import (
+    Account,
     Browser,
+    DailySet,
     Login,
     MorePromotions,
     PunchCards,
-    Searches,
     ReadToEarn,
-    DailySet,
-    Account,
+    Searches,
 )
 from src.browser import RemainingSearches
 from src.loggingColoredFormatter import ColoredFormatter

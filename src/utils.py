@@ -21,8 +21,7 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from urllib3 import Retry
 
-from .constants import REWARDS_URL
-from .constants import SEARCH_URL
+from .constants import REWARDS_URL, SEARCH_URL
 
 
 class Utils:
@@ -226,7 +225,7 @@ class Utils:
     def getBrowserConfig(sessionPath: Path) -> dict | None:
         configFile = sessionPath / "config.json"
         if not configFile.exists():
-            return
+            return None
         with open(configFile, "r") as f:
             return json.load(f)
 

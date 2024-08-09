@@ -1,15 +1,18 @@
 import argparse
 import logging
+import os
 import random
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Type, NamedTuple
+from typing import Any, NamedTuple, Type
 
 import ipapi
-import seleniumwire.undetected_chromedriver as webdriver
-import undetected_chromedriver
+
+# import seleniumwire.undetected_chromedriver as webdriver
 from ipapi.exceptions import RateLimited
-from selenium.webdriver import ChromeOptions
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver
 
 from src import Account
@@ -28,7 +31,7 @@ class RemainingSearches(NamedTuple):
 class Browser:
     """WebDriver wrapper class."""
 
-    webdriver: undetected_chromedriver.Chrome
+    # webdriver: webdriver.Chrome
 
     def __init__(
         self, mobile: bool, account: Account, args: argparse.Namespace
@@ -56,7 +59,7 @@ class Browser:
         if newBrowserConfig:
             self.browserConfig = newBrowserConfig
             Utils.saveBrowserConfig(self.userDataDir, self.browserConfig)
-        self.webdriver = self.browserSetup()
+        self.webdriver = self.browserSetup("/usr/lib/chromium-browser/chromedriver")
         self.utils = Utils(self.webdriver)
         logging.debug("out __init__")
 
@@ -65,10 +68,10 @@ class Browser:
         return self
 
     def __exit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc_value: BaseException | None,
-            traceback: TracebackType | None,
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ):
         # Cleanup actions when exiting the browser context
         logging.debug(
@@ -78,26 +81,38 @@ class Browser:
         self.webdriver.close()
         self.webdriver.quit()
 
-    def browserSetup(
-        self,
-    ) -> undetected_chromedriver.Chrome:
+    def browserSetup(self, driver_path: str) -> WebDriver:
         # Configure and setup the Chrome browser
-        options = undetected_chromedriver.ChromeOptions()
-        options.headless = self.headless
+        chrome_driver_path = "/usr/lib/chromium-browser/chromedriver"
+        chrome_binary_path = "/usr/bin/chromium-browser"
+
+        options = Options()
+        # options = webdriver.ChromeOptions()
+        options.add_argument("--headless")
+        # options.add_argument("start-maximized")
+        # options.add_argument("--no-sandbox")
         options.add_argument(f"--lang={self.localeLang}")
         options.add_argument("--log-level=3")
-        options.add_argument("--blink-settings=imagesEnabled=false")      #If you are having MFA sign in issues comment this line out
+        options.add_argument(
+            "--blink-settings=imagesEnabled=false"
+        )  # If you are having MFA sign in issues comment this line out
         options.add_argument("--ignore-certificate-errors")
         options.add_argument("--ignore-certificate-errors-spki-list")
         options.add_argument("--ignore-ssl-errors")
-        options.add_argument("--no-sandbox")
+        # options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-extensions")
         options.add_argument("--dns-prefetch-disable")
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-features=Translate")
+        options.add_argument("--enable-logging")
         options.add_argument("--disable-features=PrivacySandboxSettings4")
-        options.add_argument("--disable-search-engine-choice-screen") #153
+        options.add_argument("--disable-search-engine-choice-screen")  # 153
+
+        options.binary_location = chrome_binary_path
+
+        # Set the DISPLAY environment variable to :0.0
+        os.environ["DISPLAY"] = ":0.0"
 
         seleniumwireOptions: dict[str, Any] = {"verify_ssl": False}
 
@@ -109,16 +124,15 @@ class Browser:
                 "no_proxy": "localhost,127.0.0.1",
             }
 
-        # Obtain webdriver chrome driver version
-        version = self.getChromeVersion()
-        major = int(version.split(".")[0])
+        # driver = webdriver.Chrome(
+        #     executable_path=driver_path,
+        #     options=options,
+        #     seleniumwire_options=seleniumwireOptions,
+        #     user_data_dir=self.userDataDir.as_posix(),
+        # )
 
-        driver = webdriver.Chrome(
-            options=options,
-            seleniumwire_options=seleniumwireOptions,
-            user_data_dir=self.userDataDir.as_posix(),
-            version_main=major,
-        )
+        s = Service(executable_path=chrome_driver_path)
+        driver = webdriver.Chrome(service=s, options=options)
 
         seleniumLogger = logging.getLogger("seleniumwire")
         seleniumLogger.setLevel(logging.ERROR)
@@ -236,7 +250,7 @@ class Browser:
         return version
 
     def getRemainingSearches(
-            self, desktopAndMobile: bool = False
+        self, desktopAndMobile: bool = False
     ) -> RemainingSearches | int:
         dashboard = self.utils.getDashboardData()
         searchPoints = 1
