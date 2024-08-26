@@ -13,7 +13,9 @@ import yaml
 from apprise import Apprise
 from requests import Session
 from requests.adapters import HTTPAdapter
-from selenium.common import NoSuchElementException, TimeoutException
+from selenium.common import (ElementClickInterceptedException,
+                             ElementNotInteractableException,
+                             NoSuchElementException, TimeoutException)
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -40,19 +42,31 @@ class Utils:
         return Path(__file__).parent.parent
 
     @staticmethod
-    def loadConfig(config_file=getProjectRoot() / "config.yaml") -> dict:
-        with open(config_file, "r") as file:
-            return yaml.safe_load(file)
+    def loadConfig(configFilename="config.yaml") -> dict:
+        configFile = Utils.getProjectRoot() / configFilename
+        try:
+            with open(configFile, "r") as file:
+                config = yaml.safe_load(file)
+                if not config:
+                    logging.info(f"{file} doesn't exist")
+                    return {}
+                return config
+        except OSError:
+            logging.warning(f"{configFilename} doesn't exist")
+            return {}
 
     @staticmethod
     def sendNotification(title, body) -> None:
         if Utils.args.disable_apprise:
             return
         apprise = Apprise()
-        urls: list[str] = Utils.loadConfig().get("apprise", {}).get("urls", [])
+        urls: list[str] = Utils.loadConfig("config-private.yaml").get("apprise", {}).get("urls", [])
+        if not urls:
+            logging.debug("No urls found, not sending notification")
+            return
         for url in urls:
             apprise.add(url)
-        apprise.notify(body=body, title=title)
+        assert apprise.notify(title=str(title), body=str(body))
 
     def waitUntilVisible(
         self, by: str, selector: str, timeToWait: float = 10
@@ -136,7 +150,7 @@ class Utils:
     @staticmethod
     def makeRequestsSession(session: Session = requests.session()) -> Session:
         retry = Retry(
-            total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504]
+            total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504]
         )
         session.mount(
             "https://", HTTPAdapter(max_retries=retry)
@@ -200,10 +214,7 @@ class Utils:
             time.sleep(2)
 
     def switchToNewTab(self, timeToWait: float = 0) -> None:
-        time.sleep(0.5)
         self.webdriver.switch_to.window(window_name=self.webdriver.window_handles[1])
-        if timeToWait > 0:
-            time.sleep(timeToWait)
 
     def closeCurrentTab(self) -> None:
         self.webdriver.close()
@@ -234,3 +245,10 @@ class Utils:
         configFile = sessionPath / "config.json"
         with open(configFile, "w") as f:
             json.dump(config, f)
+
+    def click(self, element: WebElement) -> None:
+        try:
+            element.click()
+        except (ElementClickInterceptedException, ElementNotInteractableException):
+            self.tryDismissAllMessages()
+            element.click()
