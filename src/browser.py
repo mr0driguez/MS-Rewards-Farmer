@@ -7,7 +7,7 @@ from types import TracebackType
 from typing import Any, Type
 
 import ipapi
-# import seleniumwire.undetected_chromedriver as webdriver
+# # import seleniumwire.undetected_chromedriver as webdriver
 from ipapi.exceptions import RateLimited
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -80,14 +80,12 @@ class Browser:
 
         options = Options()
         # options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
+        # options.add_argument("--headless")
         # options.add_argument("start-maximized")
         # options.add_argument("--no-sandbox")
-        options.add_argument(f"--lang={self.localeLang}")
+        # options.add_argument(f"--lang={self.localeLang}")
         options.add_argument("--log-level=3")
-        options.add_argument(
-            "--blink-settings=imagesEnabled=false"
-        )  # If you are having MFA sign in issues comment this line out
+        options.add_argument("--blink-settings=imagesEnabled=false")
         options.add_argument("--ignore-certificate-errors")
         options.add_argument("--ignore-certificate-errors-spki-list")
         options.add_argument("--ignore-ssl-errors")
@@ -98,13 +96,13 @@ class Browser:
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-features=Translate")
         options.add_argument("--enable-logging")
-        options.add_argument("--disable-features=PrivacySandboxSettings4")
-        options.add_argument("--disable-search-engine-choice-screen")  # 153
-
         options.binary_location = chrome_binary_path
 
         # Set the DISPLAY environment variable to :0.0
         os.environ["DISPLAY"] = ":0.0"
+        options.add_argument("--enable-logging")
+        options.add_argument("--disable-features=PrivacySandboxSettings4")
+        options.add_argument("--disable-search-engine-choice-screen")  # 153
 
         seleniumwireOptions: dict[str, Any] = {"verify_ssl": False}
 
