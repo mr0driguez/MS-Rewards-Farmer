@@ -7,12 +7,10 @@ from types import TracebackType
 from typing import Any, Type
 
 import ipapi
-# # import seleniumwire.undetected_chromedriver as webdriver
 from ipapi.exceptions import RateLimited
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.chrome.service import Service as ChromeService
 
 from src import Account, RemainingSearches
 from src.userAgentGenerator import GenerateUserAgent
@@ -21,8 +19,6 @@ from src.utils import Utils
 
 class Browser:
     """WebDriver wrapper class."""
-
-    # webdriver: webdriver.Chrome
 
     def __init__(
         self, mobile: bool, account: Account, args: argparse.Namespace
@@ -73,16 +69,15 @@ class Browser:
         self.webdriver.close()
         self.webdriver.quit()
 
-    def browserSetup(self, driver_path: str) -> WebDriver:
+    def browserSetup(self, driver_path: str):
         # Configure and setup the Chrome browser
-        chrome_driver_path = "/usr/lib/chromium-browser/chromedriver"
-        chrome_binary_path = "/usr/bin/chromium-browser"
+        driver_path = "/usr/bin/chromedriver"
 
         options = Options()
         # options = webdriver.ChromeOptions()
-        # options.add_argument("--headless")
+        options.add_argument("--headless")
         # options.add_argument("start-maximized")
-        # options.add_argument("--no-sandbox")
+        options.add_argument("--no-sandbox")
         # options.add_argument(f"--lang={self.localeLang}")
         options.add_argument("--log-level=3")
         options.add_argument("--blink-settings=imagesEnabled=false")
@@ -96,13 +91,6 @@ class Browser:
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-features=Translate")
         options.add_argument("--enable-logging")
-        options.binary_location = chrome_binary_path
-
-        # Set the DISPLAY environment variable to :0.0
-        os.environ["DISPLAY"] = ":0.0"
-        options.add_argument("--enable-logging")
-        options.add_argument("--disable-features=PrivacySandboxSettings4")
-        options.add_argument("--disable-search-engine-choice-screen")  # 153
 
         seleniumwireOptions: dict[str, Any] = {"verify_ssl": False}
 
@@ -114,15 +102,9 @@ class Browser:
                 "no_proxy": "localhost,127.0.0.1",
             }
 
-        # driver = webdriver.Chrome(
-        #     executable_path=driver_path,
-        #     options=options,
-        #     seleniumwire_options=seleniumwireOptions,
-        #     user_data_dir=self.userDataDir.as_posix(),
-        # )
-
-        s = Service(executable_path=chrome_driver_path)
-        driver = webdriver.Chrome(service=s, options=options)
+        # Initialize the Chrome WebDriver
+        service = ChromeService(executable_path=driver_path)
+        driver = webdriver.Chrome(service=service, options=options)
 
         seleniumLogger = logging.getLogger("seleniumwire")
         seleniumLogger.setLevel(logging.ERROR)
